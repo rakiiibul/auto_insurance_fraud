@@ -1,11 +1,82 @@
 ---
-title: "actuarial_science"
+title: "Actuarial_science"
 author: "Raikibul HASAN"
 date: '2023-01-03'
 output: html_document
 ---
 
+\newunicodechar{₁}{\ensuremath{{}_1}}
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(warning = FALSE,message=FALSE)
+knitr::opts_chunk$set(warning = TRUE,message=TRUE)
 ```
 
+## Load Libraries
+
+```{r}
+
+#library(tibble)
+#library(dplyr)
+#library(DT)
+
+```
+
+## Loading the dataset
+
+```{r}
+library(readr)
+insurance_claims <- read_csv("data/insurance_claims.csv")
+insurance_claims
+```
+
+## Exploratory Data Analysis
+
+-   missing values & outliers
+-   inconsistencies amnong variable \## Data Cleaning
+-   replace missing values
+-   fixing incorrect data points
+-   removal of outlying data points \## Feature Selection -find features relevant to the model \## Feature Engineering
+
+```{r}
+
+```
+
+
+
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+KLKOASLDASD
