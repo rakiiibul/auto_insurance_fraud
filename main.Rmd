@@ -18,6 +18,7 @@ knitr::opts_chunk$set(warning = TRUE,message=TRUE)
 #library(tibble)
 #library(dplyr)
 #library(DT)
+library(ggplot2)
 
 ```
 
@@ -35,48 +36,208 @@ insurance_claims
 -   inconsistencies amnong variable \## Data Cleaning
 -   replace missing values
 -   fixing incorrect data points
--   removal of outlying data points \## Feature Selection -find features relevant to the model \## Feature Engineering
+-   removal of outlying data points \## Feature Selection 
+-find features relevant to the model \## Feature Engineering
+
+```{r}
+head(df)
+```
+```{r}
+str(df)
+```
+
+```{r}
+df=insurance_claims
+drop <- c("incident_date","policy_bind_date","_c39")
+df_1 = df[,!(names(df) %in% drop)]
+df_1
+```
+
+
+
+```{r}
+df_1[df_1=="?"] <- NA
+library(visdat)
+vis_miss(df_1,cluster = TRUE)
+```
+
+```{r}
+fill_missing_value <- function(df,col_name) {
+  mode=names(which.max(table(df$col_name)))
+  df$col_name[is.na(df$col_name)] <- mode
+}
+df_1$collision_type<-fill_missing_value(df_1,collision_type)
+df_1$property_damage<-fill_missing_value(df_1,property_damage)
+df_1$police_report_available<-fill_missing_value(df_1,property_damage)
+vis_miss(df_1,cluster = TRUE)
+
+```
+
+```{r}
+
+df_2 <- cbind(df_1,df[,(names(df) %in% drop)])
+df_2
+
+```
+```{r}
+object <- object %>% 
+  mutate(fraud_reported = recode(fraud_reported, 
+                    "Y" = 1, 
+                    "N" = 0))
+str(object)
+```
+
+```{r}
+install.packages("corrplot")
+if (!require("tidyverse")) install.packages("tidyverse")
+library("corrplot")
+numeric<- df_2 %>% select(where(is.numeric))
+res <- cor(numeric)
+corrplot(res, method="color",tl.cex=0.8)
+```
+
+```{r fig.height=8,fig.width=8}
+#x11(width = 20, height = 10)
+if (!require("ggcorrplot")) install.packages("ggcorrplot")
+library(ggcorrplot)
+model.matrix(~0+., data=numeric) %>% 
+  cor(use="pairwise.complete.obs") %>% 
+  ggcorrplot(lab=TRUE, lab_size=3,sig.level = 0.05,tl.cex = 12)
+```
+
+
+
+
+```{r}
+irrelevent_col = c('policy_number','policy_bind_date','policy_state','insured_zip','incident_location','incident_date','incident_state','incident_city','insured_hobbies','auto_make','auto_model','auto_year','_c39')
+model_df = df_2[,!(names(df_2) %in% irrelevent_col)]
+model_df
+
+```
+```{r}
+object<- df_2 %>% select_if(negate(is.numeric))
+res <- cor(numeric)
+corrplot(res, method="color",tl.cex=0.8)
+```
+
+
+```{r}
+object %>% summarise_all(funs(n_distinct(.)))
+```
+```{r}
+#object$fraud_reported <- encode_binary(object$fraud_reported)
+object <- object %>% 
+  mutate(fraud_reported = recode(fraud_reported, 
+                    "Y" = 1, 
+                    "N" = 0))
+str(object)
+```
+
+
+```{r}
+
+#round(prop.table(table(data$fraud_reported)),2)
+
+#table(data$fraud_reported)
+#data$policy_bind_date = as.Date(data$policy_bind_date) - as.Date("1990-01-08")
+#data$incident_date = as.Date(data$incident_date) - as.Date("2015-01-01") 
+model_df <- model_df %>% 
+  mutate(fraud_reported = recode(fraud_reported, 
+                    "Y" = 1, 
+                    "N" = 0))
+
+```
+
+
+
+```{r}
+#if (!require("mltools")) install.packages("mltools")
+#if (!require("data.table")) install.packages("data.table")
+library(data.table)
+library(mltools)
+drop <- c("_c39","fraud_reported")
+object = object[,!(names(object) %in% drop)]
+data<-model_df
+data = data %>% mutate_if(is.character,as.factor) 
+#data$fraud_reported=as.factor(data$fraud_reported)
+#data <- na.omit(data)
+data = as.data.frame(data)
+newdata <- one_hot(as.data.table(data))
+
+```
+```{r}
+#newdata<-as.numeric(newdata)
+mat <- cor(newdata)
+correlations <- as.data.frame(mat[,61])
+names(correlations) <- c("fraud_reported")
+correlations <- correlations %>% arrange(desc(abs(fraud_reported)))
+select <- correlations %>% 
+              filter(abs(fraud_reported)>0.1 & abs(fraud_reported) != 1) 
+select
+```
+
+```{r}
+#if (!require("Metrics","pROC","precrec","ROSE")) 
+install.packages("Metrics","pROC","precrec","ROSE")
+#if (!require("nnet","randomForest","caret")) 
+#install.packages(nnet,randomForest,caret)
+library(magrittr)
+library(Metrics)
+#if (!require("data.table")) install.packages("data.table")
+#library(pROC)
+# library(DMwR)
+library(precrec) #for Precision-Recall function
+library(ROSE) 
+library(nnet) 
+library(randomForest)
+
+install.packages('caret', dependencies=T)
+library(caret)
+
+train = data.frame(model_df)
+train_index = createDataPartition(train$fraud_reported, times = 1, p=0.8, list=F)
+train_data = train[train_index,]
+test_data = train[-train_index,]
+dim(train_data)
+dim(test_data)
+```
+
+```{r}
+
+```
+```{r}
+impute_mode <- function(ds, type = "columnwise", convert_tibble = TRUE) 
+  {
+  calc_mode <- function(x) {
+    unique_x <- unique(x)
+    unique_x_freq <- tabulate(match(x, unique_x))
+    unique_x[which.max(unique_x_freq)]
+  }
+  apply_imputation(ds, FUN = calc_mode, type = type, convert_tibble = convert_tibble)
+}
+
+df_1['collision_type'] <- impute_mode(df_1['collision_type'])
+```
 
 ```{r}
 
 ```
 
 
-
-
-
-
 ```{r}
-
+sample(insurance_claims, 5)
 ```
 
-
 ```{r}
-
+replace()
 ```
 
-
-
 ```{r}
-
+df=insurance_claims
+#
 ```
 
 
 
 
 
-```{r}
-
-```
-
-
-
-
-
-
-
-
-
-
-
-KLKOASLDASD
