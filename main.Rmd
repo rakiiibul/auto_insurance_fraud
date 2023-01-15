@@ -13,6 +13,8 @@ output:
 knitr::opts_chunk$set(warning = FALSE,message=FALSE)  
 ```
 
+**Use "renv::restore()" then "renv::activate()" to install all of the library and dependencies".**
+
 # Contents
 
 **Click on link for quick view:**
@@ -172,7 +174,7 @@ categorical<- df_2 %>% select_if(negate(is.numeric))
 categorical
 ```
 
-◘
+We don't add to much visualization for this part ,as we have a lot of columns. We just visualize one/two plot here.
 
 ```{r}
 categorical %>% summarise_all(funs(n_distinct(.)))
@@ -481,7 +483,7 @@ plot(rf_gridsearch)
 
 ### 2.6 Lets check by blancing data wheather Accuracy increase?
 
-We use both sampling method together for haveing a balance data.
+Check the best model with balance data set . For this purpose , we use both sampling method at the same time.
 
 ```{r}
 balanced_data <- ovun.sample(as.factor(fraud_reported) ~ ., data = train_data, method = "both", p=0.5,N=800, seed = 1)$data
@@ -557,7 +559,6 @@ model_com_fpr<- data.frame(Model_name,f1_score,precison_score,recall_score)
 model_com_fpr
 ```
 
-
 ```{r}
 top_corr
 ```
@@ -572,10 +573,13 @@ dim(test_data)
 
 ```
 
+Lets check one more time, our top correlated column with target variable from feature selection part(1.5). Check weather the accuracy increase or not!
+
 ```{r}
 top_corlist <- c("incident_severity_Major.Damage","incident_severity_Minor.Damage", "incident_severity_Total.Loss","vehicle_claim","total_claim_amount", "property_claim","authorities_contacted_None","incident_severity_Trivial.Damage","incident_type_Vehicle.Theft","incident_type_Parked.Car","fraud_reported")
 traindata_with_top_f<-subset(train_data,select= top_corlist)
 ```
+
 ```{r}
 
 svm_mod <- ksvm(as.factor(fraud_reported) ~ . , data= traindata_with_top_f, kernel='rbfdot', )
@@ -585,8 +589,7 @@ cf_svm_samp<-confusionMatrix(pred_svm_mod,as.factor(test_data$fraud_reported),mo
 cf_svm_samp
 ```
 
-
-
+We see from this workshop, the difficulty with detecting fraud using machine learning is that fraudulent claims are much less frequent than legitimate ones(Imbalanced data set).And another problem is that this data set has limited sample size.
 
 **THANK YOU**\
 **HAPPY CODING :)**
