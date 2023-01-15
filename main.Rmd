@@ -1,17 +1,70 @@
 ---
-title: "Actuarial_science"
+title: "Auto Insurance Fraud Detection"
 author: "Raikibul HASAN"
-date: '2023-01-03'
-output: html_document
+date: "2023-01-03"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 \newunicodechar{₁}{\ensuremath{{}_1}}
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(warning = TRUE,message=TRUE)
+knitr::opts_chunk$set(warning = FALSE,message=FALSE)  
 ```
 
-## Load Libraries
+# Contents
+
+**Click on link for quick view:**
+
+0.  [Load Libraries](#load)
+1.  [Data pre-processing](#pre_pro)
+
+-   1.1 Load data set
+
+-   1.2 Data Understanding
+
+    -   statistics view
+
+-   1.3 Data cleaning & Handling Missing value
+
+    -   finding missing values\
+    -   inconsistencies among variable\
+    -   replace missing values\
+    -   fixing incorrect data points\
+
+-   1.4 Exploratory Data Analysis
+
+    -   Uni variate Analysis
+        -   Numerical Variables\
+        -   Categorical Variables\
+    -   Multivariate Analysis\
+
+-   1.5 Feature Selection & Feature Engineering
+
+    -   fixing outliers\
+    -   Encoding\
+    -   find features relevant to the model
+
+-   1.6 Train- Test split
+
+-   split data 80% for training & 20% for testing\
+
+2.  [MACHINE LEARNING MODEL](#model)
+
+-   2.1 Support Vector Classifier
+-   2.2 Decision Tree Classifier
+-   2.3 Random Forest Classifier
+-   2.4 Logistic regression
+-   2.5 Hyper parameter Tuning - Random Search - Grid Search
+-   2.6 Prediction With balance data
+
+3.  [Models Comparison](#comparison)
+
+-   3.1 Accuracy comparison
+-   3.2 F1 , Precision & Recall score Comparison
+
+# 0 Load Libraries <a name="load"></a>
 
 ```{r}
 library(ggplot2)
@@ -36,73 +89,56 @@ library(cvms)
 library(kernlab)
 library(ROSE)
 ```
-# Data preprocessing
-## 1.1 Load  data set
+
+# 1. Data Pre-processing <a name="pre_pro"></a>
+
+## 1.1 Load data set
 
 ```{r}
 insurance_claims <- read_csv("data/insurance_claims.csv")
 insurance_claims
 ```
+
 ## 1.2 Data Understanding
-  - statistics view
-## 1.3   Data cleaning & Handling Missing value
-- finding missing values 
-- inconsistencies amnong variable 
-- replace missing values
-- fixing incorrect data points
-## 1.4  Exploratory Data Analysis
-- Univariate Analysis
-  - Numerical Variables
-  - Categorical Variables
-- Multivariate Analysis
-## 1.5 Feature Selection  & Feature Engineering
-- Label encoding
-- find features relevant to the model
-- Scaling Numerical Value
 
-## 1.6 Train- Test split
- -split data 80% for traning & 20% for testing
-# 2 MACHINE LEARNING MODEL
-
- ## 2.1 Support Vector Classifier
- ## 2.2 Decision Tree Classifier
- ## 2.3 Random Forest Classifier
- ## 2.4 Logistic regression
- ## 2.5 Models Comparison
-
-
- ## 1.2 Data Understanding
 ```{r}
 cat("Number of rows and columns", dim(insurance_claims))
 head(insurance_claims)
 ```
 
 Let's have a statistics overview of our data set.
+
 ```{r}
 summary(insurance_claims)
 ```
 
 We want to see the type of every feature in our data set.
+
 ```{r}
 str(insurance_claims)
 ```
 
-## 1.3   Data cleaning & Handling Missing value
+## 1.3 Data cleaning & Handling Missing values
+
 ```{r}
 drop <- c("incident_date","policy_bind_date")
 df_1 = insurance_claims[,!(names(insurance_claims) %in% drop)]
 df_1
 ```
-We have some missing values denoted by "?" So, we first replace those with "NA"  
+
+We have some missing values denoted by "?" So, we first replace those with "NA"
+
 ```{r}
 df_1[df_1=="?"] <- NA
 vis_miss(df_1,)
 ```
+
 ```{r}
 colSums(is.na(df_1))
 ```
 
-As The column "_c39" doesn't have any data,lets remove this column.
+As The column "\_c39" doesn't have any data,lets remove this column.
+
 ```{r}
 cat("Before : ",dim(df_1))
 df_1 = df_1[,!(names(df_1) %in% c("_c39"))]
@@ -110,6 +146,7 @@ cat("\nAfter : ",dim(df_1))
 ```
 
 For column collision_type,property_damage,police_report_available, fill the missing value with mode.
+
 ```{r}
 fill_missing_value <- function(df,col_name) {
   mode=names(which.max(table(df$col_name)))
@@ -121,14 +158,12 @@ df_1$police_report_available<-fill_missing_value(df_1,police_report_available)
 vis_miss(df_1,cluster = TRUE)
 ```
 
-## 1.4  Exploratory Data Analysis
-
+## 1.4 Exploratory Data Analysis
 
 ```{r}
 df_2=df_1
 describe(df_2)
 ```
-
 
 Let's filter the Categorical column from df_2
 
@@ -138,11 +173,12 @@ categorical
 ```
 
 ◘
+
 ```{r}
 categorical %>% summarise_all(funs(n_distinct(.)))
 ```
 
-#### Univariate Analysis
+#### Uni-variate Analysis
 
 ```{r}
 g <- ggplot(df_2, aes(fraud_reported,fill=fraud_reported))
@@ -155,17 +191,17 @@ df_2 %>%
 g <- ggplot(df_2, aes(insured_hobbies,fill=insured_hobbies))
 g + geom_bar( )
 ```
+
 ```{r}
 g <- ggplot(df_2, aes(incident_severity,fill=incident_severity))
 g + geom_bar()
 ```
+
 ```{r}
 g <- ggplot(df_2, aes(incident_type,fill=incident_type))
 g + geom_bar()
 
 ```
-
-
 
 ```{r}
 numeric<- df_2 %>% select(where(is.numeric))
@@ -179,13 +215,11 @@ df_2%>%
   theme_bw()+
   labs(title="Age")
 ```
+
 ```{r}
 ggplot(stack(numeric[,1:5]), aes(x = ind, y = values,fill="#0C8E7A")) +
   geom_boxplot()
 ```
-
-
-
 
 ```{r}
 ggplot(stack(numeric[,6:10]), aes(x = ind, y = values,fill="#0C8E7A")) +
@@ -198,11 +232,13 @@ ggplot(stack(numeric[,11:15]), aes(x = ind, y = values,fill="#0C8E7A")) +
   geom_boxplot()
 
 ```
+
 ```{r}
 ggplot(stack(numeric[,16:18]), aes(x = ind, y = values,fill="#0C8E7A")) +
   geom_boxplot()
 
 ```
+
 ```{r}
 outliers <- function(x) {
 
@@ -225,8 +261,7 @@ remove_outliers <- function(df, cols = names(df)) {
 remove_outliers(df_2, c('total_claim_amount', 'umbrella_limit', 'property_claim'))
 ```
 
-
-### Multivariate Analysis<a name="data_overview"></a>
+### Multivariate Analysis
 
 ```{r}
 df_2 %>%
@@ -238,7 +273,6 @@ geom_density(alpha = 0.7)+
      title="policy_annual_premium based  on sex")+
 theme(plot.caption = element_text(face = "italic"))
 ```
-
 
 ```{r}
 df_2 <- df_1 %>% 
@@ -254,20 +288,20 @@ model.matrix(~0+., data=numeric) %>%
   ggcorrplot(lab=TRUE, lab_size=3,sig.level = 0.05,tl.cex = 12)
 ```
 
+## 1.5 Feature Engineering
 
 ```{r}
 irrelevent_col = c('policy_number','policy_bind_date','policy_state','insured_zip','incident_location','incident_date','incident_state','incident_city','insured_hobbies','auto_make','auto_model','auto_year')
 model_df = df_2[,!(names(df_2) %in% irrelevent_col)]
 model_df
+
+
 ```
-
-
 
 ```{r}
 model_df = model_df %>% mutate_if(is.character,as.factor) 
 model_df = as.data.frame(model_df)
 model_df <- one_hot(as.data.table(model_df))
-model_df
 ```
 
 ```{r}
@@ -280,9 +314,12 @@ top_corr<- sorted_feat %>%
 top_corr
 ```
 
-
+```{r}
+head(model_df)
+```
 
 ## 1.6 Train- Test split
+
 ```{r}
 train = data.frame(model_df)
 train_index = createDataPartition(train$fraud_reported, times = 1, p=0.8, list=F)
@@ -292,20 +329,21 @@ dim(train_data)
 dim(test_data)
 ```
 
-# 2 MACHINE LEARNING MODEL
+# 2 MACHINE LEARNING MODEL <a name="model"></a>
 
-### 2.1 Support Vector Classifier 
+### 2.1 Support Vector Classifier
 
 ```{r}
 svm <- ksvm(as.factor(fraud_reported) ~ . , data= train_data, kernel='rbfdot', )
 print(svm)
 pred_svm <- predict(svm, test_data)
-cf_svm<-confusionMatrix(as.factor(test_data$fraud_reported),pred_svm,dnn=c("Prediction","Reference"))
+cf_svm<-confusionMatrix(pred_svm,as.factor(test_data$fraud_reported),mode = "everything",dnn=c("Prediction","Reference"))
 performance <- pred_svm == test_data$fraud_reported
 table(performance)
 prop.table(table(performance))
 cf_svm
 ```
+
 ```{r}
 table <- data.frame(cf_svm$table)
 
@@ -315,19 +353,19 @@ plot_confusion_matrix(table,
                       counts_col = "Freq")
 ```
 
+## 2.2 Decision Tree Classifier
 
- ## 2.2 Decision Tree Classifier
 ```{r }
 decision_tree_model <- rpart(as.factor(fraud_reported)~., data=train_data)
 rpart.plot(decision_tree_model)
 ```
 
-
 ```{r}
 prediction_dt <- predict(decision_tree_model,test_data,type = 'class')
-CFM_dt<-confusionMatrix(as.factor(test_data$fraud_reported),prediction_dt,dnn=c("Prediction","Reference"))
+CFM_dt<-confusionMatrix(prediction_dt,as.factor(test_data$fraud_reported),mode = "everything",dnn=c("Prediction","Reference"))
 CFM_dt
 ```
+
 ```{r}
 table <- data.frame(CFM_dt$table)
 
@@ -338,7 +376,8 @@ plot_confusion_matrix(table,
 
 ```
 
- ## 2.3 Logistic regression
+## 2.3 Logistic regression
+
 ```{r}
 log_reg_model <- glm(fraud_reported~., data=train_data, family=binomial)
 # Compute the predictions
@@ -346,7 +385,7 @@ proba_logreg <- predict(log_reg_model, test_data, type="response")
 pred_logreg <- ifelse(proba_logreg<0.5, 0, 1)
 pred_logreg <- factor(pred_logreg)
 # Store the confusion matrix and other metrics
-CFM_log_reg<-confusionMatrix(as.factor(test_data$fraud_reported), pred_logreg,dnn=c("Prediction","Reference"))
+CFM_log_reg<-confusionMatrix(pred_logreg,as.factor(test_data$fraud_reported),mode = "everything",dnn=c("Prediction","Reference"))
 table <- data.frame(CFM_log_reg$table)
 CFM_log_reg
 ```
@@ -359,20 +398,21 @@ plot_confusion_matrix(table,
 ```
 
 ## 2.4 Random Forest Classifier
+
 ```{r}
 random_forest <- randomForest(as.factor(fraud_reported)~., data=train_data, proximity=TRUE,importance=TRUE)
 varImpPlot(random_forest,type=2,pch=15,col=1,cex=1,main="IMPORTANCE(varImpPlot)")
 ```
 
-
 ```{r}
 hist(treesize(random_forest))
 
 ```
+
 ```{r}
 # Compute the predictions
 prediction_rf <- predict(random_forest, test_data)
-cf_rf<-confusionMatrix(as.factor(test_data$fraud_reported), prediction_rf,dnn=c("Prediction","Reference"))
+cf_rf<-confusionMatrix(prediction_rf,as.factor(test_data$fraud_reported),mode = "everything",dnn=c("Prediction","Reference"))
 cf_rf
 ```
 
@@ -395,8 +435,10 @@ prediction_rf = evalmod(scores = as.numeric(prediction_rf), labels = test_data$f
 prediction_rf
 ```
 
-## Hyper parameter Tuning
+## 2.5 Hyper parameter Tuning
+
 ### Random search
+
 ```{r}
 #10 folds repeat 3 times
 control <- trainControl(method='repeatedcv', 
@@ -409,13 +451,15 @@ rf_random <- train(as.factor(fraud_reported) ~ .,
                    data = model_df,
                    method = 'rf',
                    metric = 'Accuracy',
-                   tuneLength  = 15, 
+                 tuneLength  = 15, 
                    trControl = control)
 print(rf_random)
 ```
+
 ```{r}
 plot(rf_random)
 ```
+
 ### Grid Search
 
 ```{r}
@@ -434,21 +478,115 @@ rf_gridsearch <- train(as.factor(fraud_reported) ~ .,
 print(rf_gridsearch)
 plot(rf_gridsearch)
 ```
-### Lets check by blancing data wheather Accuracy increase?
+
+### 2.6 Lets check by blancing data wheather Accuracy increase?
+
 We use both sampling method together for haveing a balance data.
+
 ```{r}
 balanced_data <- ovun.sample(as.factor(fraud_reported) ~ ., data = train_data, method = "both", p=0.5,N=800, seed = 1)$data
 ```
 
-Try with Support Vector Classifier with the balance data.
+-   Try with Support Vector Classifier with the balance data.
+
 ```{r}
 svm <- ksvm(as.factor(fraud_reported) ~ . , data= balanced_data, kernel='rbfdot', )
 print(svm)
 pred_svm <- predict(svm, test_data)
-cf_svm<-confusionMatrix(as.factor(test_data$fraud_reported),pred_svm,dnn=c("Prediction","Reference"))
+cf_svm_samp<-confusionMatrix(pred_svm,as.factor(test_data$fraud_reported),mode = "everything",dnn=c("Prediction","Reference"))
 performance <- pred_svm == test_data$fraud_reported
 table(performance)
 prop.table(table(performance))
-cf_svm
+cf_svm_samp
 ```
 
+# 3 Model Comparison <a name="comparison"></a>
+
+## 3.1 Accuracy Comparison Table
+
+```{r}
+accuracy_svm <- cf_svm$overall['Accuracy']*100
+accuracy_dt <- CFM_dt$overall['Accuracy']*100
+accuracy_log <- CFM_log_reg$overall['Accuracy']*100
+accuracy_RF <- cf_rf$overall['Accuracy']*100
+accuracy_svm_sampling <- cf_svm_samp$overall['Accuracy']*100
+
+Model_name <- c("SVC","Decission_tree","Logistic_regression","Random_forest",
+            "SVC_Balanced")
+accuracy<-c( accuracy_svm,accuracy_dt,accuracy_log,accuracy_RF,
+            accuracy_svm_sampling)
+model_accuracy_com<- data.frame(Model_name,accuracy)
+model_accuracy_com
+```
+
+```{r}
+ggplot(model_accuracy_com, aes(Model_name, accuracy, fill = Model_name)) +
+  geom_bar(stat="identity", position = "dodge") +
+  labs(title="Model Accuracy Comparison")
+```
+
+## 3.2 F1, Precision & Recall Score Comparison
+
+```{r}
+f1_svm <- cf_svm$byClass['F1']*100 
+pre_svm <- cf_svm$byClass['Precision']*100 
+re_svm <- cf_svm$byClass['Recall']*100 
+
+f1_dt <- CFM_dt$byClass['F1']*100 
+pre_dt <- CFM_dt$byClass['Precision']*100 
+re_dt <- CFM_dt$byClass['Recall']*100 
+
+f1_log <- cf_svm$byClass['F1']*100 
+pre_log <- cf_svm$byClass['Precision']*100 
+re_log <- cf_svm$byClass['Recall']*100 
+
+f1_RF <- cf_rf$byClass['F1']*100 
+pre_RF <- cf_rf$byClass['Precision']*100 
+re_RF <- cf_rf$byClass['Recall']*100 
+
+f1_svm_samp <- cf_svm_samp$byClass['F1']*100 
+pre_svm_samp <- cf_svm_samp$byClass['Precision']*100 
+re_svm_samp <- cf_svm_samp$byClass['Recall']*100 
+
+f1_score<-c( f1_svm,f1_dt,f1_log,f1_RF,f1_svm_samp)
+
+precison_score<-c( pre_svm,pre_dt,pre_log,pre_RF,pre_svm_samp)
+
+recall_score<-c( re_svm,re_dt,re_log,re_RF,re_svm_samp)
+model_com_fpr<- data.frame(Model_name,f1_score,precison_score,recall_score)
+model_com_fpr
+```
+
+
+```{r}
+top_corr
+```
+
+```{r}
+train = data.frame(model_df)
+train_index = createDataPartition(train$fraud_reported, times = 1, p=0.8, list=F)
+train_data = train[train_index,]
+test_data = train[-train_index,]
+dim(train_data)
+dim(test_data)
+
+```
+
+```{r}
+top_corlist <- c("incident_severity_Major.Damage","incident_severity_Minor.Damage", "incident_severity_Total.Loss","vehicle_claim","total_claim_amount", "property_claim","authorities_contacted_None","incident_severity_Trivial.Damage","incident_type_Vehicle.Theft","incident_type_Parked.Car","fraud_reported")
+traindata_with_top_f<-subset(train_data,select= top_corlist)
+```
+```{r}
+
+svm_mod <- ksvm(as.factor(fraud_reported) ~ . , data= traindata_with_top_f, kernel='rbfdot', )
+pred_svm_mod <- predict(svm_mod, test_data)
+cf_svm_samp<-confusionMatrix(pred_svm_mod,as.factor(test_data$fraud_reported),mode = "everything",dnn=c("Prediction","Reference"))
+
+cf_svm_samp
+```
+
+
+
+
+**THANK YOU**\
+**HAPPY CODING :)**
